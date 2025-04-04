@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "866054972201",
+    "firebase_url": "https://coctailmixology-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "coctailmixology",
+    "storage_bucket": "coctailmixology.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866054972201:android:c0404e1cf59c0d7914cd38",
+        "android_client_info": {
+          "package_name": "pl.domain.application.mixology"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjSfas3HuNF9mNDcV-Lhf5j0W4hduVpp0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
