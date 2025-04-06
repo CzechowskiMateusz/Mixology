@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Mixology</string>
+    <string name="title_activity_cocktail_detail">CocktailDetailActivity</string>
 </resources>
