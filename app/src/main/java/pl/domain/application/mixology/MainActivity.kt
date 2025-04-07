@@ -46,7 +46,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.CardColors
-import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 
 
 class MainActivity : ComponentActivity() {
@@ -102,7 +108,7 @@ fun CocktailCard(cocktail: Cocktail, onClick: () -> Unit) {
             .padding(bottom = 12.dp)
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.background
+            containerColor = MaterialTheme.colorScheme.primary
         ),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -147,6 +153,7 @@ fun CocktailCard(cocktail: Cocktail, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CocktailsScreen(navController: NavController) {
     val cocktailsState = remember { mutableStateOf<List<Cocktail>>(emptyList()) }
@@ -164,53 +171,68 @@ fun CocktailsScreen(navController: NavController) {
         }
     )
 
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
+    // Loading State
+    if (loadingState.value) {
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Mixology",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-
-        if (loadingState.value) {
-            Box(modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
-            ){
-                CircularProgressIndicator(modifier = Modifier
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier
                     .padding(16.dp)
                     .align(Alignment.Center)
-                )
-            }
-        } else if (errorState.value != null) {
-            Text(text = "Error: ${errorState.value}", modifier = Modifier.padding(16.dp))
-        } else {
+            )
+        }
+    } else if (errorState.value != null) {
+        Text(text = "Error: ${errorState.value}", modifier = Modifier.padding(16.dp))
+    } else {
 
-            if (cocktailsState.value.isNotEmpty()) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 30.dp, bottom = 16.dp, start = 16.dp, end = 16.dp)
+        // Main code
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = "Mixology",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            },
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.primary
                 ) {
-                    items(cocktailsState.value) { cocktail ->
-                        CocktailCard(cocktail) {
-                            navController.navigate("cocktailDetail/${cocktail.ID_Drink}")
+                    // ...
+                }
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                if (cocktailsState.value.isNotEmpty()) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 30.dp, bottom = 16.dp, start = 16.dp, end = 16.dp)
+                    ) {
+                        items(cocktailsState.value) { cocktail ->
+                            CocktailCard(cocktail) {
+                                navController.navigate("cocktailDetail/${cocktail.ID_Drink}")
+                            }
                         }
                     }
+                } else {
+                    Text(text = "No cocktails available", modifier = Modifier.padding(16.dp))
                 }
-            } else {
-                Text(text = "No cocktails available", modifier = Modifier.padding(16.dp))
             }
         }
     }
