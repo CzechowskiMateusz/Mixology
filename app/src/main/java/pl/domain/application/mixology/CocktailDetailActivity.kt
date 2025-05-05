@@ -26,6 +26,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import pl.domain.application.mixology.ui.theme.MixologyTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
@@ -35,6 +36,21 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import com.chargemap.compose.numberpicker.NumberPicker
+import android.media.MediaPlayer
+import android.provider.Telephony.Sms
+import android.widget.Toast
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.ui.platform.LocalContext
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+
 
 
 class CocktailDetailActivity : ComponentActivity() {
@@ -78,6 +94,130 @@ fun FetchCocktailById(cocktailId: String, onResult: (Cocktail) -> Unit, onError:
         onResult(cocktail)
     }
 }
+
+@Composable
+fun TimerSect(){
+    val minutes = remember { mutableStateOf(0) }
+    val seconds = remember { mutableStateOf(10) }
+
+    val totalSeconds = remember { mutableStateOf(1f)}
+    val remains = remember { mutableStateOf((totalSeconds.value * 60).toInt()) }
+    val isRuning = remember { mutableStateOf(false)}
+    val hasStarted = remember { mutableStateOf(false)}
+
+    val context = LocalContext.current
+    val mediaPlayer = remember { MediaPlayer.create(context, R.raw.alarm) }
+
+    LaunchedEffect(isRuning.value) {
+        if(isRuning.value){
+            while (isRuning.value && remains.value > 0){
+                delay(1000)
+                remains.value -= 1
+            }
+            isRuning.value = false
+            hasStarted.value = false
+            mediaPlayer.start()
+        }
+    }
+
+    Column (
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ){
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally){
+            if(hasStarted.value){
+                Text (
+                    text = String.format(
+                        "%02d:%02d",
+                        remains.value/60,
+                        remains.value%60
+                    ),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+            if(!hasStarted.value){
+                Row(
+                    horizontalArrangement =  Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ){
+                    Column(horizontalAlignment = Alignment.CenterHorizontally){
+                        Text("Minutes")
+                        NumberPicker(
+                            value = minutes.value,
+                            range = 0..59,
+                            onValueChange = {minutes.value = it}
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(24.dp))
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally){
+                        Text("Seconds")
+                        NumberPicker(
+                            value = seconds.value,
+                            range = 0..59,
+                            onValueChange = {seconds.value = it}
+                        )
+                    }
+                }
+            }
+
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)){
+            Button(onClick = {
+                if(!hasStarted.value){
+                    remains.value = (minutes.value * 60) + seconds.value
+                    hasStarted.value = true
+                }
+                isRuning.value = true
+            },
+                enabled = (minutes.value > 0 || seconds.value > 0)
+            ) {
+                Text(if(hasStarted.value)"Resume" else "Start")
+            }
+
+            Button(onClick = {
+                isRuning.value = false
+                },
+                enabled = isRuning.value
+            ) {
+                Text("Pause")
+            }
+
+            Button(onClick = {
+                isRuning.value = false
+                hasStarted.value = false
+                remains.value = (minutes.value * 60) + seconds.value
+                },
+                enabled = hasStarted.value
+            ) {
+                Text("Stop")
+            }
+        }
+    }
+}
+
+
+
+fun sendIngredientsSMS(ingredients: List<String>, context: Context) {
+    val message = "Składniki: \n" + ingredients.joinToString("\n") { "• $it" }
+
+    val smsUri = Uri.parse("smsto:")
+    val intent = Intent(Intent.ACTION_SENDTO, smsUri).apply {
+        putExtra("sms_body", message)
+    }
+
+    context.startActivity(intent)
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,6 +278,21 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                         )
                     )
                 },
+                floatingActionButton = {
+                    val context = LocalContext.current
+                    FloatingActionButton(
+                        onClick = {
+                            sendIngredientsSMS(cocktail.List_of_mixture, context)
+                        },
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Send,
+                            contentDescription = "Send Ingredients"
+                        )
+                    }
+                }
+                ,
                 bottomBar = {
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -155,11 +310,13 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
 
                     LazyColumn(
                         modifier = Modifier
-                            .padding(top = 100.dp, start = 50.dp, end = 50.dp, bottom = 60.dp)
+                            .padding(top = 0.dp, start = 50.dp, end = 50.dp, bottom = 0.dp)
                     ) {
 
                         if (cocktail.ImageUrl.isNotBlank()) {
                             item {
+                                Spacer(modifier = Modifier.height(50.dp))
+
                                 Image(
                                     painter = rememberAsyncImagePainter(cocktail.ImageUrl),
                                     contentDescription = cocktail.Name,
@@ -201,6 +358,16 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             )
                         }
 
+                        item{
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Minutnik",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            TimerSect()
+                        }
+
                         item {
                             Spacer(modifier = Modifier.height(16.dp))
 
@@ -216,6 +383,8 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
+
+                            Spacer(modifier = Modifier.height(60.dp))
                         }
 
                     }
