@@ -50,7 +50,15 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.LocalBar
+import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.NoDrinks
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 
 
 class CocktailDetailActivity : ComponentActivity() {
@@ -97,25 +105,27 @@ fun FetchCocktailById(cocktailId: String, onResult: (Cocktail) -> Unit, onError:
 
 @Composable
 fun TimerSect(){
-    val minutes = remember { mutableStateOf(0) }
-    val seconds = remember { mutableStateOf(10) }
+    val minutes = rememberSaveable { mutableStateOf(0) }
+    val seconds = rememberSaveable { mutableStateOf(10) }
 
-    val totalSeconds = remember { mutableStateOf(1f)}
-    val remains = remember { mutableStateOf((totalSeconds.value * 60).toInt()) }
-    val isRuning = remember { mutableStateOf(false)}
-    val hasStarted = remember { mutableStateOf(false)}
+    val totalSeconds = rememberSaveable { mutableStateOf(1f)}
+    val remains = rememberSaveable { mutableStateOf((totalSeconds.value * 60).toInt()) }
+    val isRunning = rememberSaveable { mutableStateOf(false)}
+    val hasStarted = rememberSaveable { mutableStateOf(false)}
 
     val context = LocalContext.current
     val mediaPlayer = remember { MediaPlayer.create(context, R.raw.alarm) }
 
-    LaunchedEffect(isRuning.value) {
-        if(isRuning.value){
-            while (isRuning.value && remains.value > 0){
+    LaunchedEffect(isRunning.value) {
+        if(isRunning.value){
+            while (isRunning.value && remains.value > 0){
                 delay(1000)
                 remains.value -= 1
             }
-            isRuning.value = false
+            isRunning.value = false
             hasStarted.value = false
+            mediaPlayer.start()
+            delay(1000)
             mediaPlayer.start()
         }
     }
@@ -136,6 +146,7 @@ fun TimerSect(){
                         remains.value%60
                     ),
                     style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.padding(16.dp)
                 )
             }
@@ -146,22 +157,38 @@ fun TimerSect(){
                     verticalAlignment = Alignment.CenterVertically
                 ){
                     Column(horizontalAlignment = Alignment.CenterHorizontally){
-                        Text("Minutes")
+                        Text(
+                            text = "Minutes",
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
                         NumberPicker(
                             value = minutes.value,
                             range = 0..59,
-                            onValueChange = {minutes.value = it}
+                            onValueChange = {minutes.value = it},
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontSize = 24.sp
+                            ),
+                            dividersColor = MaterialTheme.colorScheme.primary
                         )
                     }
 
                     Spacer(modifier = Modifier.width(24.dp))
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally){
-                        Text("Seconds")
+                        Text(
+                            text = "Seconds",
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
                         NumberPicker(
                             value = seconds.value,
                             range = 0..59,
-                            onValueChange = {seconds.value = it}
+                            onValueChange = {seconds.value = it},
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontSize = 24.sp
+                            ),
+                            dividersColor = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -177,7 +204,7 @@ fun TimerSect(){
                     remains.value = (minutes.value * 60) + seconds.value
                     hasStarted.value = true
                 }
-                isRuning.value = true
+                isRunning.value = true
             },
                 enabled = (minutes.value > 0 || seconds.value > 0)
             ) {
@@ -185,15 +212,15 @@ fun TimerSect(){
             }
 
             Button(onClick = {
-                isRuning.value = false
+                isRunning.value = false
                 },
-                enabled = isRuning.value
+                enabled = isRunning.value
             ) {
                 Text("Pause")
             }
 
             Button(onClick = {
-                isRuning.value = false
+                isRunning.value = false
                 hasStarted.value = false
                 remains.value = (minutes.value * 60) + seconds.value
                 },
@@ -224,6 +251,7 @@ fun sendIngredientsSMS(ingredients: List<String>, context: Context) {
 fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
     val cocktailState = remember { mutableStateOf<Cocktail?>(null) }
     val errorState = remember { mutableStateOf<String?>(null) }
+    val sortAsc = rememberSaveable { mutableStateOf(true) }
 
     FetchCocktailById(
         cocktailId = cocktailId,
@@ -259,7 +287,7 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             Text(
                                 text = cocktail.Name,
                                 style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         },
                         navigationIcon = {
@@ -269,12 +297,12 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back",
-                                    tint = MaterialTheme.colorScheme.onPrimary
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         },
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primary
+                            containerColor = MaterialTheme.colorScheme.surface
                         )
                     )
                 },
@@ -295,9 +323,44 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                 ,
                 bottomBar = {
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = MaterialTheme.colorScheme.surface
                     ) {
 
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = {
+                                navController.navigate("cocktailList?isAlcoholicString=null")
+                            },
+                            icon = { Icon(Icons.Default.List, contentDescription = "Lista", tint = MaterialTheme.colorScheme.onSurface) },
+                            label = { Text("Drinki", color = MaterialTheme.colorScheme.onSurface) }
+                        )
+
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = {
+                                navController.navigate("cocktailList?isAlcoholicString=true")
+                            },
+                            icon = { Icon(imageVector = Icons.Filled.LocalBar, contentDescription = "Alkoholowe", tint = MaterialTheme.colorScheme.onSurface) },
+                            label = { Text("Alko" , color = MaterialTheme.colorScheme.onSurface) }
+                        )
+
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = {
+                                navController.navigate("cocktailList?isAlcoholicString=false")
+                            },
+                            icon = { Icon(Icons.Default.LocalDrink , contentDescription = "Bezalkoholowe", tint = MaterialTheme.colorScheme.onSurface) },
+                            label = { Text("Bezalko" , color = MaterialTheme.colorScheme.onSurface) }
+                        )
+
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = {
+                                navController.navigate("favorites")
+                            },
+                            icon = { Icon(Icons.Default.Favorite , contentDescription = "Ulubione", tint = MaterialTheme.colorScheme.onSurface) },
+                            label = { Text("Ulubione" , color = MaterialTheme.colorScheme.onSurface) }
+                        )
                     }
                 }
             ) { innerPadding ->
@@ -317,8 +380,9 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             item {
                                 Spacer(modifier = Modifier.height(50.dp))
 
+                                val context = LocalContext.current
                                 Image(
-                                    painter = rememberAsyncImagePainter(cocktail.ImageUrl),
+                                    painter = rememberAsyncImagePainter(context.resources.getIdentifier(cocktail.ImageUrl, "drawable", context.packageName)),
                                     contentDescription = cocktail.Name,
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -336,7 +400,9 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                                 text = cocktail.Description,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier
-                                    .padding(bottom = 20.dp),
+                                    .padding(bottom = 20.dp)
+                                ,
+                                color = MaterialTheme.colorScheme.tertiary,
                                 textAlign = TextAlign.Justify
                             )
                         }
@@ -345,15 +411,17 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Text(
-                                text = "Składniki: ",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Składniki",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
 
                             Text(
                                 text = cocktail.List_of_mixture
                                     .joinToString("\n") { "• $it" },
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                         }
@@ -363,6 +431,7 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             Text(
                                 text = "Minutnik",
                                 style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                             TimerSect()
@@ -373,14 +442,16 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
 
                             Text(
                                 text = "Sposób przygotowania: ",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                             Text(
                                 text = cocktail.Step_Guide
                                     .mapIndexed { index, step -> "${index + 1}. $step" }
                                     .joinToString("\n"),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
 

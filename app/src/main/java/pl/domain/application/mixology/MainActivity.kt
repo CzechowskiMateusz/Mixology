@@ -28,6 +28,7 @@ import coil.compose.rememberAsyncImagePainter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -45,6 +46,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,12 +56,37 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.draw.shadow
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LocalBar
+import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.NoDrinks
+import androidx.compose.material.icons.filled.SortByAlpha
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.*
 
+enum class SortOrder {
+    NONE,
+    ASCENDING,
+    DESCENDING
+}
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         FirebaseApp.initializeApp(this)
+        val db by lazy { AppDatabase.getDatabase(applicationContext) }
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -68,8 +96,14 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
 
                 NavHost(navController, startDestination = "cocktailList"){
-                    composable("cocktailList"){
-                        CocktailsScreen(navController)
+                    composable("cocktailList?isAlcoholicString={isAlcoholicString}"){ backStackEntry ->
+                        val isAlcoholicString = backStackEntry.arguments?.getString("isAlcoholicString")
+                        val isAlcoholic = when (isAlcoholicString) {
+                            "true" -> true
+                            "false" -> false
+                            else -> null
+                        }
+                        CocktailsScreen(navController, isAlcoholic)
                     }
                     composable("cocktailDetail/{cocktailId}"){ backentry ->
                         val cocktailId = backentry.arguments?.getString("cocktailId")
@@ -78,20 +112,25 @@ class MainActivity : ComponentActivity() {
                             CocktailDetailScreen(cocktailId = cocktailId, navController= navController)
                         }
                     }
+
+                    composable("favorites") {
+                        CocktailsScreen(navController, isAlcoholicFilter = null, showOnlyFavorites = true)
+                    }
                 }
             }
         }
     }
 }
 
-@Composable
 fun FetchCocktails( onResult: (List<Cocktail>) -> Unit, onError: (Exception) -> Unit){
     val db = FirebaseFirestore.getInstance()
     db.collection("cocktails")
         .get()
         .addOnSuccessListener { snap ->
             val cocktails = snap.documents.mapNotNull{
-                it.toObject(Cocktail::class.java)
+                val cocktail = it.toObject(Cocktail::class.java)
+                Log.d("Cocktail", "Alcoholic: ${cocktail?.Alcoholic}")
+                cocktail
             }
             onResult(cocktails)
         }
@@ -101,11 +140,17 @@ fun FetchCocktails( onResult: (List<Cocktail>) -> Unit, onError: (Exception) -> 
 }
 
 @Composable
-fun CocktailCard(cocktail: Cocktail, onClick: () -> Unit) {
+fun CocktailCard(
+    cocktail: Cocktail,
+    isFavorite: Boolean,
+    onToggleFavorite: (Boolean) -> Unit,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 12.dp)
+            .shadow(8.dp, shape = RoundedCornerShape(12.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary
@@ -114,12 +159,13 @@ fun CocktailCard(cocktail: Cocktail, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(modifier = Modifier
-                .padding(16.dp)
+                .padding(20.dp)
                 .fillMaxWidth()
         ) {
+            val context = LocalContext.current
             if(cocktail.ImageUrl.isNotBlank()){
                 Image(
-                    painter = rememberAsyncImagePainter(cocktail.ImageUrl),
+                    painter = rememberAsyncImagePainter(context.resources.getIdentifier(cocktail.ImageUrl, "drawable", context.packageName)),
                     contentDescription = cocktail.Name,
                     modifier = Modifier
                         .width(100.dp)
@@ -135,10 +181,26 @@ fun CocktailCard(cocktail: Cocktail, onClick: () -> Unit) {
                     .padding(start = 12.dp)
             ) {
 
-                Text(
-                    text = cocktail.Name,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = cocktail.Name,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                        contentDescription = "Favorite",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier
+                            .clickable { onToggleFavorite(!isFavorite) }
+                            .padding(start = 12.dp)
+                            .size(18.dp)
+                    )
+                }
 
                 Text(
                     text = cocktail.Description,
@@ -155,33 +217,61 @@ fun CocktailCard(cocktail: Cocktail, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CocktailsScreen(navController: NavController) {
+fun CocktailsScreen(navController: NavController, isAlcoholicFilter: Boolean? = null, showOnlyFavorites: Boolean = false) {
     val cocktailsState = remember { mutableStateOf<List<Cocktail>>(emptyList()) }
     val errorState = remember { mutableStateOf<String?>(null) }
-    val loadingState = remember { mutableStateOf(true) }
+    val currentFilter = remember { mutableStateOf(isAlcoholicFilter) }
+    val loadingCocktailsState = remember { mutableStateOf(true) }
 
-    FetchCocktails(
-        onResult = { cocktails ->
-            cocktailsState.value = cocktails
-            loadingState.value = false
-        },
-        onError = { error ->
-            errorState.value = error.localizedMessage
-            loadingState.value = false
-        }
-    )
+    val context = LocalContext.current
+    val dao = remember { AppDatabase.getDatabase(context).favoriteDao() }
+    val scope = rememberCoroutineScope()
+    val favoritesState = remember { mutableStateOf(emptySet<String>()) }
+
+    val sortOrder = remember { mutableStateOf(SortOrder.NONE) }
+
+    LaunchedEffect(showOnlyFavorites) {
+        favoritesState.value = dao.getAll().map { it.cocktailId }.toSet()
+    }
+
+    LaunchedEffect(favoritesState.value, currentFilter.value, sortOrder.value) {
+        loadingCocktailsState.value = true
+        FetchCocktails(
+            onResult = { cocktails ->
+                val filtered = when {
+                    showOnlyFavorites -> cocktails.filter { it.ID_Drink.toString() in favoritesState.value }
+                    currentFilter.value == true -> cocktails.filter { it.Alcoholic == 1 }
+                    currentFilter.value == false -> cocktails.filter { it.Alcoholic == 0 }
+                    else -> cocktails
+                }
+
+                val sorted = when (sortOrder.value) {
+                    SortOrder.ASCENDING -> filtered.sortedBy { it.Name }
+                    SortOrder.DESCENDING -> filtered.sortedByDescending { it.Name }
+                    else -> filtered
+                }
+
+                cocktailsState.value = sorted
+                loadingCocktailsState.value = false
+            },
+            onError = { error ->
+                errorState.value = error.localizedMessage
+                loadingCocktailsState.value = false
+            }
+        )
+    }
 
     // Loading State
-    if (loadingState.value) {
+    if (loadingCocktailsState.value ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             CircularProgressIndicator(
                 modifier = Modifier
                     .padding(16.dp)
-                    .align(Alignment.Center)
+                    .align(Alignment.Center),
             )
         }
     } else if (errorState.value != null) {
@@ -196,19 +286,84 @@ fun CocktailsScreen(navController: NavController) {
                         Text(
                             text = "Mixology",
                             style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    actions = {
+                        Icon(
+                            imageVector = Icons.Default.SortByAlpha,
+                            contentDescription = "Sortuj",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .clickable {
+                                    sortOrder.value = when (sortOrder.value) {
+                                        SortOrder.NONE, SortOrder.DESCENDING -> SortOrder.ASCENDING
+                                        SortOrder.ASCENDING -> SortOrder.DESCENDING
+                                    }
+                                }
+                                .padding(16.dp)
                         )
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 )
             },
             bottomBar = {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.surface
                 ) {
-                    // ...
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            navController.navigate("cocktailList?isAlcoholicString=null") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    inclusive = true
+                                }
+                            }
+                        },
+                        icon = { Icon(Icons.Default.List, contentDescription = "Lista", tint = MaterialTheme.colorScheme.onSurface) },
+                        label = { Text("Drinki", color = MaterialTheme.colorScheme.onSurface) }
+                    )
+
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            navController.navigate("cocktailList?isAlcoholicString=true") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    inclusive = true
+                                }
+                            }
+                        },
+                        icon = { Icon(imageVector = Icons.Filled.LocalBar, contentDescription = "Alkoholowe", tint = MaterialTheme.colorScheme.onSurface) },
+                        label = { Text("Alko" , color = MaterialTheme.colorScheme.onSurface) }
+                    )
+
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            navController.navigate("cocktailList?isAlcoholicString=false") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    inclusive = true
+                                }
+                            }
+                        },
+                        icon = { Icon(Icons.Default.LocalDrink , contentDescription = "Bezalko", tint = MaterialTheme.colorScheme.onSurface) },
+                        label = { Text("Bezalko" , color = MaterialTheme.colorScheme.onSurface) }
+                    )
+
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            navController.navigate("favorites") {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    inclusive = true
+                                }
+                            }
+                        },
+                        icon = { Icon(Icons.Default.Favorite , contentDescription = "Ulubione", tint = MaterialTheme.colorScheme.onSurface) },
+                        label = { Text("Ulubione" , color = MaterialTheme.colorScheme.onSurface) }
+                    )
                 }
             }
         ) { innerPadding ->
@@ -222,16 +377,40 @@ fun CocktailsScreen(navController: NavController) {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = 30.dp, bottom = 16.dp, start = 16.dp, end = 16.dp)
+                            .padding(top = 0.dp, bottom = 0.dp, start = 16.dp, end = 16.dp)
                     ) {
+
+                        item {
+                            Spacer(modifier = Modifier.height(30.dp))
+                        }
+
                         items(cocktailsState.value) { cocktail ->
-                            CocktailCard(cocktail) {
-                                navController.navigate("cocktailDetail/${cocktail.ID_Drink}")
-                            }
+                            val isFav = favoritesState.value.contains(cocktail.ID_Drink.toString())
+                            CocktailCard(
+                                cocktail = cocktail,
+                                isFavorite = isFav,
+                                onToggleFavorite = { makeFav ->
+                                    scope.launch {
+                                        if (makeFav) {
+                                            dao.insert(FavoriteCocktail(cocktail.ID_Drink.toString()))
+                                        } else {
+                                            dao.delete(FavoriteCocktail(cocktail.ID_Drink.toString()))
+                                        }
+                                        favoritesState.value = dao.getAll().map { it.cocktailId }.toSet()
+                                    }
+                                },
+                                onClick = {
+                                    navController.navigate("cocktailDetail/${cocktail.ID_Drink}")
+                                }
+                            )
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(30.dp))
                         }
                     }
                 } else {
-                    Text(text = "No cocktails available", modifier = Modifier.padding(16.dp))
+                    Text(text = "No cocktails added yet.", modifier = Modifier.padding(16.dp))
                 }
             }
         }
