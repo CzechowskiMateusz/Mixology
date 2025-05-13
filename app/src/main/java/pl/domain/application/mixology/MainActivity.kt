@@ -66,6 +66,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.NoDrinks
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.filled.Star
@@ -217,7 +218,11 @@ fun CocktailCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CocktailsScreen(navController: NavController, isAlcoholicFilter: Boolean? = null, showOnlyFavorites: Boolean = false) {
+fun CocktailsScreen(
+    navController: NavController,
+    isAlcoholicFilter: Boolean? = null,
+    showOnlyFavorites: Boolean = false
+) {
     val cocktailsState = remember { mutableStateOf<List<Cocktail>>(emptyList()) }
     val errorState = remember { mutableStateOf<String?>(null) }
     val currentFilter = remember { mutableStateOf(isAlcoholicFilter) }
@@ -229,6 +234,9 @@ fun CocktailsScreen(navController: NavController, isAlcoholicFilter: Boolean? = 
     val favoritesState = remember { mutableStateOf(emptySet<String>()) }
 
     val sortOrder = remember { mutableStateOf(SortOrder.NONE) }
+
+    val searchQuery = remember { mutableStateOf("") }
+    val isSearching = remember { mutableStateOf(false) }
 
     LaunchedEffect(showOnlyFavorites) {
         favoritesState.value = dao.getAll().map { it.cocktailId }.toSet()
@@ -261,8 +269,7 @@ fun CocktailsScreen(navController: NavController, isAlcoholicFilter: Boolean? = 
         )
     }
 
-    // Loading State
-    if (loadingCocktailsState.value ) {
+    if (loadingCocktailsState.value) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -277,19 +284,41 @@ fun CocktailsScreen(navController: NavController, isAlcoholicFilter: Boolean? = 
     } else if (errorState.value != null) {
         Text(text = "Error: ${errorState.value}", modifier = Modifier.padding(16.dp))
     } else {
-
-        // Main code
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
                     title = {
-                        Text(
-                            text = "Mixology",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        if (isSearching.value) {
+                            androidx.compose.material3.TextField(
+                                value = searchQuery.value,
+                                onValueChange = { searchQuery.value = it },
+                                placeholder = { Text("Szukaj drinka...") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        } else {
+                            Text(
+                                text = "Mixology",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     },
                     actions = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Szukaj",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .clickable {
+                                    isSearching.value = !isSearching.value
+                                    if (!isSearching.value) {
+                                        searchQuery.value = ""
+                                    }
+                                }
+                                .padding(16.dp)
+                        )
+
                         Icon(
                             imageVector = Icons.Default.SortByAlpha,
                             contentDescription = "Sortuj",
@@ -317,9 +346,7 @@ fun CocktailsScreen(navController: NavController, isAlcoholicFilter: Boolean? = 
                         selected = false,
                         onClick = {
                             navController.navigate("cocktailList?isAlcoholicString=null") {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    inclusive = true
-                                }
+                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
                             }
                         },
                         icon = { Icon(Icons.Default.List, contentDescription = "Lista", tint = MaterialTheme.colorScheme.onSurface) },
@@ -330,39 +357,33 @@ fun CocktailsScreen(navController: NavController, isAlcoholicFilter: Boolean? = 
                         selected = false,
                         onClick = {
                             navController.navigate("cocktailList?isAlcoholicString=true") {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    inclusive = true
-                                }
+                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
                             }
                         },
-                        icon = { Icon(imageVector = Icons.Filled.LocalBar, contentDescription = "Alkoholowe", tint = MaterialTheme.colorScheme.onSurface) },
-                        label = { Text("Alko" , color = MaterialTheme.colorScheme.onSurface) }
+                        icon = { Icon(Icons.Filled.LocalBar, contentDescription = "Alkoholowe", tint = MaterialTheme.colorScheme.onSurface) },
+                        label = { Text("Alko", color = MaterialTheme.colorScheme.onSurface) }
                     )
 
                     NavigationBarItem(
                         selected = false,
                         onClick = {
                             navController.navigate("cocktailList?isAlcoholicString=false") {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    inclusive = true
-                                }
+                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
                             }
                         },
-                        icon = { Icon(Icons.Default.LocalDrink , contentDescription = "Bezalko", tint = MaterialTheme.colorScheme.onSurface) },
-                        label = { Text("Bezalko" , color = MaterialTheme.colorScheme.onSurface) }
+                        icon = { Icon(Icons.Default.LocalDrink, contentDescription = "Bezalko", tint = MaterialTheme.colorScheme.onSurface) },
+                        label = { Text("Bezalko", color = MaterialTheme.colorScheme.onSurface) }
                     )
 
                     NavigationBarItem(
                         selected = false,
                         onClick = {
                             navController.navigate("favorites") {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    inclusive = true
-                                }
+                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
                             }
                         },
-                        icon = { Icon(Icons.Default.Favorite , contentDescription = "Ulubione", tint = MaterialTheme.colorScheme.onSurface) },
-                        label = { Text("Ulubione" , color = MaterialTheme.colorScheme.onSurface) }
+                        icon = { Icon(Icons.Default.Favorite, contentDescription = "Ulubione", tint = MaterialTheme.colorScheme.onSurface) },
+                        label = { Text("Ulubione", color = MaterialTheme.colorScheme.onSurface) }
                     )
                 }
             }
@@ -373,18 +394,19 @@ fun CocktailsScreen(navController: NavController, isAlcoholicFilter: Boolean? = 
                     .padding(innerPadding)
                     .background(MaterialTheme.colorScheme.background)
             ) {
-                if (cocktailsState.value.isNotEmpty()) {
+                val displayedCocktails = cocktailsState.value.filter {
+                    it.Name.contains(searchQuery.value, ignoreCase = true)
+                }
+
+                if (displayedCocktails.isNotEmpty()) {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = 0.dp, bottom = 0.dp, start = 16.dp, end = 16.dp)
+                            .padding(horizontal = 16.dp)
                     ) {
+                        item { Spacer(modifier = Modifier.height(30.dp)) }
 
-                        item {
-                            Spacer(modifier = Modifier.height(30.dp))
-                        }
-
-                        items(cocktailsState.value) { cocktail ->
+                        items(displayedCocktails) { cocktail ->
                             val isFav = favoritesState.value.contains(cocktail.ID_Drink.toString())
                             CocktailCard(
                                 cocktail = cocktail,
@@ -405,16 +427,16 @@ fun CocktailsScreen(navController: NavController, isAlcoholicFilter: Boolean? = 
                             )
                         }
 
-                        item {
-                            Spacer(modifier = Modifier.height(30.dp))
-                        }
+                        item { Spacer(modifier = Modifier.height(30.dp)) }
                     }
                 } else {
-                    Text(text = "No cocktails added yet.", modifier = Modifier.padding(16.dp))
+                    Text(
+                        text = "Brak wyników.",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
         }
     }
 }
-
-

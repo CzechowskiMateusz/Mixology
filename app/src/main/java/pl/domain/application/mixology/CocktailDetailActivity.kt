@@ -50,15 +50,27 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.NoDrinks
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Start
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import pl.domain.application.mixology.animations.animateShake
+import pl.domain.application.mixology.animations.registerShakeSensor
+import pl.domain.application.mixology.animations.showConfetti
+import pl.domain.application.mixology.animations.unregisterShakeSensor
 
 
 class CocktailDetailActivity : ComponentActivity() {
@@ -127,6 +139,7 @@ fun TimerSect(){
             mediaPlayer.start()
             delay(1000)
             mediaPlayer.start()
+            showConfetti(context)
         }
     }
 
@@ -208,7 +221,7 @@ fun TimerSect(){
             },
                 enabled = (minutes.value > 0 || seconds.value > 0)
             ) {
-                Text(if(hasStarted.value)"Resume" else "Start")
+                Icon(Icons.Default.Start , contentDescription = "Start", tint = MaterialTheme.colorScheme.onBackground)
             }
 
             Button(onClick = {
@@ -216,7 +229,7 @@ fun TimerSect(){
                 },
                 enabled = isRunning.value
             ) {
-                Text("Pause")
+                Icon(Icons.Default.Pause , contentDescription = "Pause", tint = MaterialTheme.colorScheme.onBackground)
             }
 
             Button(onClick = {
@@ -226,7 +239,7 @@ fun TimerSect(){
                 },
                 enabled = hasStarted.value
             ) {
-                Text("Stop")
+                Icon(Icons.Default.Stop , contentDescription = "Stop", tint = MaterialTheme.colorScheme.onBackground)
             }
         }
     }
@@ -319,8 +332,7 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             contentDescription = "Send Ingredients"
                         )
                     }
-                }
-                ,
+                },
                 bottomBar = {
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surface
@@ -331,7 +343,13 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             onClick = {
                                 navController.navigate("cocktailList?isAlcoholicString=null")
                             },
-                            icon = { Icon(Icons.Default.List, contentDescription = "Lista", tint = MaterialTheme.colorScheme.onSurface) },
+                            icon = {
+                                Icon(
+                                    Icons.Default.List,
+                                    contentDescription = "Lista",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            },
                             label = { Text("Drinki", color = MaterialTheme.colorScheme.onSurface) }
                         )
 
@@ -340,8 +358,14 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             onClick = {
                                 navController.navigate("cocktailList?isAlcoholicString=true")
                             },
-                            icon = { Icon(imageVector = Icons.Filled.LocalBar, contentDescription = "Alkoholowe", tint = MaterialTheme.colorScheme.onSurface) },
-                            label = { Text("Alko" , color = MaterialTheme.colorScheme.onSurface) }
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Filled.LocalBar,
+                                    contentDescription = "Alkoholowe",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            label = { Text("Alko", color = MaterialTheme.colorScheme.onSurface) }
                         )
 
                         NavigationBarItem(
@@ -349,8 +373,14 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             onClick = {
                                 navController.navigate("cocktailList?isAlcoholicString=false")
                             },
-                            icon = { Icon(Icons.Default.LocalDrink , contentDescription = "Bezalkoholowe", tint = MaterialTheme.colorScheme.onSurface) },
-                            label = { Text("Bezalko" , color = MaterialTheme.colorScheme.onSurface) }
+                            icon = {
+                                Icon(
+                                    Icons.Default.LocalDrink,
+                                    contentDescription = "Bezalkoholowe",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            label = { Text("Bezalko", color = MaterialTheme.colorScheme.onSurface) }
                         )
 
                         NavigationBarItem(
@@ -358,8 +388,19 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             onClick = {
                                 navController.navigate("favorites")
                             },
-                            icon = { Icon(Icons.Default.Favorite , contentDescription = "Ulubione", tint = MaterialTheme.colorScheme.onSurface) },
-                            label = { Text("Ulubione" , color = MaterialTheme.colorScheme.onSurface) }
+                            icon = {
+                                Icon(
+                                    Icons.Default.Favorite,
+                                    contentDescription = "Ulubione",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            label = {
+                                Text(
+                                    "Ulubione",
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         )
                     }
                 }
@@ -378,90 +419,120 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
 
                         if (cocktail.ImageUrl.isNotBlank()) {
                             item {
+                                val context = LocalContext.current
+                                val imageRes = context.resources.getIdentifier(
+                                    cocktail.ImageUrl,
+                                    "drawable",
+                                    context.packageName
+                                )
+                                val imageView = remember { mutableStateOf<ImageView?>(null) }
+
                                 Spacer(modifier = Modifier.height(50.dp))
 
-                                val context = LocalContext.current
-                                Image(
-                                    painter = rememberAsyncImagePainter(context.resources.getIdentifier(cocktail.ImageUrl, "drawable", context.packageName)),
-                                    contentDescription = cocktail.Name,
+                                DisposableEffect(Unit) {
+                                    val listener = registerShakeSensor(context) {
+                                        imageView.value?.let {
+                                            animateShake(it)
+                                        }
+                                    }
+
+                                    onDispose {
+                                        unregisterShakeSensor(context, listener)
+                                    }
+                                }
+
+                                AndroidView(
+                                    factory = {
+                                        ImageView(it).apply {
+                                            layoutParams = ViewGroup.LayoutParams(
+                                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                                ViewGroup.LayoutParams.WRAP_CONTENT
+                                            )
+                                            scaleType = ImageView.ScaleType.CENTER_CROP
+                                            setImageResource(imageRes)
+                                            imageView.value = this
+                                        }
+                                    },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(250.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop
+                                        .clip(RoundedCornerShape(8.dp))
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                            }
+
+
+                            item {
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Text(
+                                    text = cocktail.Description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier
+                                        .padding(bottom = 20.dp),
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    textAlign = TextAlign.Justify
                                 )
                             }
+
+                            item {
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Text(
+                                    text = "Składniki",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+
+                                Text(
+                                    text = cocktail.List_of_mixture
+                                        .joinToString("\n") { "• $it" },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Minutnik",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                TimerSect()
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Text(
+                                    text = "Sposób przygotowania: ",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                                Text(
+                                    text = cocktail.Step_Guide
+                                        .mapIndexed { index, step -> "${index + 1}. $step" }
+                                        .joinToString("\n"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+
+                                Spacer(modifier = Modifier.height(60.dp))
+                            }
+
+
                         }
-
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = cocktail.Description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier
-                                    .padding(bottom = 20.dp)
-                                ,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                textAlign = TextAlign.Justify
-                            )
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = "Składniki",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-
-                            Text(
-                                text = cocktail.List_of_mixture
-                                    .joinToString("\n") { "• $it" },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-                        }
-
-                        item{
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Minutnik",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            TimerSect()
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = "Sposób przygotowania: ",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-                            Text(
-                                text = cocktail.Step_Guide
-                                    .mapIndexed { index, step -> "${index + 1}. $step" }
-                                    .joinToString("\n"),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-
-                            Spacer(modifier = Modifier.height(60.dp))
-                        }
-
                     }
                 }
             }
         }
     }
 }
-
