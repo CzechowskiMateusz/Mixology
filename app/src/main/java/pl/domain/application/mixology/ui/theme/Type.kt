@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.sp
 // Set of Material typography styles to start with
 val Typography = Typography(
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = ArmioText,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -19,21 +19,29 @@ val Typography = Typography(
     ),
 
     titleLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ArmioText,
         fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
     ),
 
     titleMedium = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = DMSerifText,
         fontWeight = FontWeight.Medium,
         fontSize = 18.sp,
         lineHeight = 22.sp,
         letterSpacing = 0.15.sp,
     ),
 
+    bodyMedium = TextStyle(
+        fontFamily = BaskerVilleText,
+        fontWeight = FontWeight.Normal,
+        fontSize = 18.sp,
+        lineHeight = 22.sp,
+        letterSpacing = 0.2.sp
+    ),
+
     bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = BaskerVilleText,
         fontStyle = FontStyle.Italic,
         fontWeight = FontWeight.Normal,
         fontSize = 13.sp,

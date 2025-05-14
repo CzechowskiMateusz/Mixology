@@ -67,10 +67,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import pl.domain.application.mixology.animations.animateShake
-import pl.domain.application.mixology.animations.registerShakeSensor
-import pl.domain.application.mixology.animations.showConfetti
-import pl.domain.application.mixology.animations.unregisterShakeSensor
+import pl.domain.application.mixology.animations.*
+import androidx.compose.ui.res.painterResource
+
 
 
 class CocktailDetailActivity : ComponentActivity() {
@@ -128,6 +127,9 @@ fun TimerSect(){
     val context = LocalContext.current
     val mediaPlayer = remember { MediaPlayer.create(context, R.raw.alarm) }
 
+    val activity = context as? Activity
+    val rootView = activity?.findViewById<ViewGroup>(android.R.id.content)
+
     LaunchedEffect(isRunning.value) {
         if(isRunning.value){
             while (isRunning.value && remains.value > 0){
@@ -136,10 +138,10 @@ fun TimerSect(){
             }
             isRunning.value = false
             hasStarted.value = false
+            rootView?.post {
+                startConfettiAnimation(activity, rootView)
+            }
             mediaPlayer.start()
-            delay(1000)
-            mediaPlayer.start()
-            showConfetti(context)
         }
     }
 
@@ -171,7 +173,7 @@ fun TimerSect(){
                 ){
                     Column(horizontalAlignment = Alignment.CenterHorizontally){
                         Text(
-                            text = "Minutes",
+                            text = "Minuta",
                             color = MaterialTheme.colorScheme.tertiary
                         )
                         NumberPicker(
@@ -190,7 +192,7 @@ fun TimerSect(){
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally){
                         Text(
-                            text = "Seconds",
+                            text = "Sekunda",
                             color = MaterialTheme.colorScheme.tertiary
                         )
                         NumberPicker(
@@ -219,9 +221,14 @@ fun TimerSect(){
                 }
                 isRunning.value = true
             },
-                enabled = (minutes.value > 0 || seconds.value > 0)
+                enabled = (minutes.value > 0 || seconds.value > 0) && !isRunning.value
             ) {
-                Icon(Icons.Default.Start , contentDescription = "Start", tint = MaterialTheme.colorScheme.onBackground)
+                Icon(
+                    painter = painterResource(id = R.drawable.strt),
+                    contentDescription = "Start",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(26.dp)
+                )
             }
 
             Button(onClick = {
@@ -264,7 +271,6 @@ fun sendIngredientsSMS(ingredients: List<String>, context: Context) {
 fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
     val cocktailState = remember { mutableStateOf<Cocktail?>(null) }
     val errorState = remember { mutableStateOf<String?>(null) }
-    val sortAsc = rememberSaveable { mutableStateOf(true) }
 
     FetchCocktailById(
         cocktailId = cocktailId,
@@ -375,11 +381,11 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                             },
                             icon = {
                                 Icon(
-                                    Icons.Default.LocalDrink,
+                                    painter = painterResource(id = R.drawable.noalcohol),
                                     contentDescription = "Bezalkoholowe",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            },
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(26.dp)
+                                ) },
                             label = { Text("Bezalko", color = MaterialTheme.colorScheme.onSurface) }
                         )
 
@@ -455,7 +461,7 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                                     },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(250.dp)
+                                        .height(350.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                 )
 
@@ -463,6 +469,17 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
 
                             }
 
+                            item {
+                                Text(
+                                    text = "Autor: ${cocktail.Author}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
 
                             item {
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -471,61 +488,111 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                                     text = cocktail.Description,
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier
+                                        .fillMaxWidth()
                                         .padding(bottom = 20.dp),
                                     color = MaterialTheme.colorScheme.tertiary,
-                                    textAlign = TextAlign.Justify
+                                    textAlign = TextAlign.Center
                                 )
                             }
 
                             item {
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                Text(
-                                    text = "Składniki",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = "Składniki",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSecondary,
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
 
-                                Text(
-                                    text = cocktail.List_of_mixture
-                                        .joinToString("\n") { "• $it" },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        Text(
+                                            text = cocktail.List_of_mixture.joinToString("\n") { "• $it" },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSecondary
+                                        )
+                                    }
+                                }
                             }
 
                             item {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = "Minutnik",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
+                                Spacer(modifier = Modifier.height(32.dp))
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 8.dp)
+                                ) {
+                                    Divider(
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        thickness = 1.dp,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(end = 8.dp)
+                                    )
+
+                                    Text(
+                                        text = "Minutnik",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
+
+                                    Divider(
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        thickness = 1.dp,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(start = 8.dp)
+                                    )
+                                }
+
                                 TimerSect()
+
                             }
 
                             item {
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                Text(
-                                    text = "Sposób przygotowania: ",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
-                                Text(
-                                    text = cocktail.Step_Guide
-                                        .mapIndexed { index, step -> "${index + 1}. $step" }
-                                        .joinToString("\n"),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.padding(bottom = 16.dp)
-                                )
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = "Sposób przygotowania",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSecondary,
+                                            modifier = Modifier.padding(bottom = 16.dp)
+                                        )
 
-                                Spacer(modifier = Modifier.height(60.dp))
+                                        Text(
+                                            text = cocktail.Step_Guide
+                                                .mapIndexed { index, step -> "${index + 1}. $step" }
+                                                .joinToString("\n\n"),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSecondary
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
 
 

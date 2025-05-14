@@ -11,6 +11,9 @@ import android.hardware.SensorManager
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.graphics.Color
+import android.util.Log
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -64,32 +67,46 @@ fun unregisterShakeSensor(context: Context, listener: SensorEventListener) {
     sensorManager.unregisterListener(listener)
 }
 
-fun showConfetti(context: Context) {
-    val confetti = ImageView(context).apply {
-        setImageResource(android.R.drawable.star_big_on)  // Możesz użyć własnego obrazka konfetti
-        setColorFilter(Color.YELLOW)
-    }
+fun startConfettiAnimation(activity: Activity, parentView: ViewGroup) {
+    val colors = listOf(
+        Color.parseColor("#DDA0DD"), // Plum
+        Color.parseColor("#DA70D6"), // Orchid
+        Color.parseColor("#EE82EE"), // Violet
+        Color.parseColor("#FF69B4"), // Hot Pink
+        Color.parseColor("#FF1493"), // Deep Pink
+        Color.parseColor("#BA55D3"), // Medium Orchid
+        Color.parseColor("#C71585"), // Medium Violet Red
+        Color.parseColor("#8A2BE2")  // Blue Violet
+    )
 
-    val animatorX = ObjectAnimator.ofFloat(confetti, "translationX", -1000f, 1000f)
-    val animatorY = ObjectAnimator.ofFloat(confetti, "translationY", -1000f, 1000f)
-    val rotation = ObjectAnimator.ofFloat(confetti, "rotation", 0f, 360f)
+    val confettiCount = 100
 
-    animatorX.duration = 2000
-    animatorY.duration = 2000
-    rotation.duration = 2000
+    repeat(confettiCount) {
+        val confetti = View(activity).apply {
+            setBackgroundColor(colors.random())
+            layoutParams = RelativeLayout.LayoutParams(20, 20)
+            x = (0..parentView.width).random().toFloat()
+            y = -50f
+        }
 
-    val set = AnimatorSet().apply {
-        playTogether(animatorX, animatorY, rotation)
-    }
+        parentView.addView(confetti)
 
-    set.interpolator = AccelerateDecelerateInterpolator()
+        val fallDuration = (1000..2500).random().toLong()
+        val fallAnimator = ObjectAnimator.ofFloat(confetti, "translationY", -50f, parentView.height + 100f).apply {
+            duration = fallDuration
+            interpolator = AccelerateDecelerateInterpolator()
+        }
 
-    set.start()
+        val rotationAnimator = ObjectAnimator.ofFloat(confetti, "rotation", 0f, (360..1440).random().toFloat()).apply {
+            duration = fallDuration
+        }
 
-    val layout = (context as Activity).findViewById<RelativeLayout>(android.R.id.content)
-    layout.addView(confetti)
-
-    set.doOnEnd {
-        layout.removeView(confetti)
+        AnimatorSet().apply {
+            playTogether(fallAnimator, rotationAnimator)
+            doOnEnd {
+                parentView.removeView(confetti)
+            }
+            start()
+        }
     }
 }

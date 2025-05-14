@@ -46,7 +46,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -76,6 +79,8 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.painterResource
+
 
 enum class SortOrder {
     NONE,
@@ -159,37 +164,54 @@ fun CocktailCard(
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Row(modifier = Modifier
-                .padding(20.dp)
-                .fillMaxWidth()
+        Row(
+            modifier = Modifier
+                .height(IntrinsicSize.Min) // <- ważne! sprawia, że karta dopasowuje się do wysokości treści
         ) {
             val context = LocalContext.current
-            if(cocktail.ImageUrl.isNotBlank()){
+
+            if (cocktail.ImageUrl.isNotBlank()) {
                 Image(
-                    painter = rememberAsyncImagePainter(context.resources.getIdentifier(cocktail.ImageUrl, "drawable", context.packageName)),
+                    painter = rememberAsyncImagePainter(
+                        context.resources.getIdentifier(
+                            cocktail.ImageUrl,
+                            "drawable",
+                            context.packageName
+                        )
+                    ),
                     contentDescription = cocktail.Name,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .width(100.dp)
-                        .height(100.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
+                        .fillMaxHeight()
+                        .width(100.dp) // szerokość obrazka
+                        .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
                 )
             }
 
             Column(
                 modifier = Modifier
+                    .padding(16.dp)
                     .fillMaxWidth()
-                    .padding(start = 12.dp)
+                    .align(Alignment.CenterVertically)
             ) {
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
                     Text(
                         text = cocktail.Name,
                         style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .width(1.dp)
+                            .height(20.dp)
+                            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f))
                     )
 
                     Icon(
@@ -198,23 +220,26 @@ fun CocktailCard(
                         tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier
                             .clickable { onToggleFavorite(!isFavorite) }
-                            .padding(start = 12.dp)
-                            .size(18.dp)
+                            .size(22.dp)
+                            .padding(start = 8.dp)
                     )
                 }
 
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Text(
                     text = cocktail.Description,
-                    textAlign = TextAlign.Justify,
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    textAlign = TextAlign.Justify,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
-
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -361,7 +386,7 @@ fun CocktailsScreen(
                             }
                         },
                         icon = { Icon(Icons.Filled.LocalBar, contentDescription = "Alkoholowe", tint = MaterialTheme.colorScheme.onSurface) },
-                        label = { Text("Alko", color = MaterialTheme.colorScheme.onSurface) }
+                        label = { Text("Alkoholowe", color = MaterialTheme.colorScheme.onSurface) }
                     )
 
                     NavigationBarItem(
@@ -371,8 +396,15 @@ fun CocktailsScreen(
                                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
                             }
                         },
-                        icon = { Icon(Icons.Default.LocalDrink, contentDescription = "Bezalko", tint = MaterialTheme.colorScheme.onSurface) },
-                        label = { Text("Bezalko", color = MaterialTheme.colorScheme.onSurface) }
+                        icon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.noalcohol),
+                                contentDescription = "Bezalkoholowe",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(26.dp)
+                            )
+                               },
+                        label = { Text("Bezalkoholowe", color = MaterialTheme.colorScheme.onSurface) }
                     )
 
                     NavigationBarItem(
