@@ -1,6 +1,5 @@
 package pl.domain.application.mixology
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -18,12 +17,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import pl.domain.application.mixology.ui.theme.MixologyTheme
-import pl.domain.application.mixology.Cocktail
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -48,27 +45,20 @@ import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CardColors
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LocalBar
-import androidx.compose.material.icons.filled.LocalDrink
-import androidx.compose.material.icons.filled.NoDrinks
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.runtime.LaunchedEffect
@@ -77,10 +67,7 @@ import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
-import androidx.compose.runtime.*
 import androidx.compose.ui.res.painterResource
-
 
 enum class SortOrder {
     NONE,
@@ -166,7 +153,7 @@ fun CocktailCard(
     ) {
         Row(
             modifier = Modifier
-                .height(IntrinsicSize.Min) // <- ważne! sprawia, że karta dopasowuje się do wysokości treści
+                .height(IntrinsicSize.Min)
         ) {
             val context = LocalContext.current
 
@@ -183,7 +170,7 @@ fun CocktailCard(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(100.dp) // szerokość obrazka
+                        .width(100.dp)
                         .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
                 )
             }
@@ -462,11 +449,25 @@ fun CocktailsScreen(
                         item { Spacer(modifier = Modifier.height(30.dp)) }
                     }
                 } else {
-                    Text(
-                        text = "Brak wyników.",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Brak wyników.",
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .shadow(2.dp, shape = RoundedCornerShape(12.dp)),
+                            style = MaterialTheme.typography.titleLarge,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }

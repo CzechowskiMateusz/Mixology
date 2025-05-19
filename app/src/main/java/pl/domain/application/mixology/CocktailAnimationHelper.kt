@@ -11,13 +11,7 @@ import android.hardware.SensorManager
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.graphics.Color
-import android.util.Log
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.ImageView
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
 import androidx.core.animation.doOnEnd
 import android.widget.RelativeLayout
 

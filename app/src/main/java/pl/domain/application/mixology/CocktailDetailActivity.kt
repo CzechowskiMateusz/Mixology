@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,51 +14,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.firestore.FirebaseFirestore
 import pl.domain.application.mixology.ui.theme.MixologyTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import com.chargemap.compose.numberpicker.NumberPicker
 import android.media.MediaPlayer
-import android.provider.Telephony.Sms
-import android.widget.Toast
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.ui.platform.LocalContext
-import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocalBar
-import androidx.compose.material.icons.filled.LocalDrink
-import androidx.compose.material.icons.filled.NoDrinks
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Start
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -68,9 +52,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import pl.domain.application.mixology.animations.*
-import androidx.compose.ui.res.painterResource
-
-
 
 class CocktailDetailActivity : ComponentActivity() {
 
@@ -226,7 +207,7 @@ fun TimerSect(){
                 Icon(
                     painter = painterResource(id = R.drawable.strt),
                     contentDescription = "Start",
-                    tint = MaterialTheme.colorScheme.onSurface,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(26.dp)
                 )
             }
@@ -236,7 +217,7 @@ fun TimerSect(){
                 },
                 enabled = isRunning.value
             ) {
-                Icon(Icons.Default.Pause , contentDescription = "Pause", tint = MaterialTheme.colorScheme.onBackground)
+                Icon(Icons.Default.Pause , contentDescription = "Pause", tint = MaterialTheme.colorScheme.onPrimary)
             }
 
             Button(onClick = {
@@ -246,12 +227,11 @@ fun TimerSect(){
                 },
                 enabled = hasStarted.value
             ) {
-                Icon(Icons.Default.Stop , contentDescription = "Stop", tint = MaterialTheme.colorScheme.onBackground)
+                Icon(Icons.Default.Stop , contentDescription = "Stop", tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
 }
-
 
 
 fun sendIngredientsSMS(ingredients: List<String>, context: Context) {
@@ -371,7 +351,7 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
                             },
-                            label = { Text("Alko", color = MaterialTheme.colorScheme.onSurface) }
+                            label = { Text("Alkoholowe", color = MaterialTheme.colorScheme.onSurface) }
                         )
 
                         NavigationBarItem(
@@ -386,7 +366,7 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                                     tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(26.dp)
                                 ) },
-                            label = { Text("Bezalko", color = MaterialTheme.colorScheme.onSurface) }
+                            label = { Text("Bezalkoholowe", color = MaterialTheme.colorScheme.onSurface) }
                         )
 
                         NavigationBarItem(
@@ -473,7 +453,7 @@ fun CocktailDetailScreen(cocktailId: String, navController: NavController) {
                                 Text(
                                     text = "Autor: ${cocktail.Author}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(bottom = 16.dp),
